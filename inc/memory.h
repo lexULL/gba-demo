@@ -73,7 +73,7 @@
 //
 // display control register - primary control of the screen (General LCD Status - Read/Write)
 // Display status and interrupt control. The H-Blank conditions are generated once per scanline, including for the "hidden" scanlines during V-Blank.
-#define REG_DISPCNT  *((volatile u16*)(MEM_IO+0x0000))
+// #define REG_DISPCNT  *((volatile u16*)(MEM_IO+0x0000))
 // Bit  Expl.
 // 0    V-Blank flag               (1=VBlank) (set in line 160..226; not 227) (Read-Only)
 // 1    H-Blank flag               (1=HBlank) (toggled in all lines, 0..227)  (Read-Only)
@@ -93,10 +93,10 @@
 // MSB = Most Significant Bit
 
 // display status register
-#define REG_DISPSTAT *((volatile u16*)(MEM_IO+0x0004))
+// #define REG_DISPSTAT *((volatile u16*)(MEM_IO+0x0004))
 // scanline counter register (Vertical Counter) (Read-Only)
 // Indicates the currently drawn scanline, values in range from 160..227 indicate "hidden" scanlines within the VBlank area.
-#define REG_VCOUNT   *((volatile u16*)(MEM_IO+0x0006))
+// #define REG_VCOUNT   *((volatile u16*)(MEM_IO+0x0006))
 // Bit  Expl.
 // 0-7  Current Scanline                                           (0..227) (Read-Only)
 // 8    Only used on the NDS for MSB of Current Scanline (LY.Bit8) (0..262) (Read-Only)
@@ -111,12 +111,12 @@
 // Then you configure which backgrounds and sprites are visible **inside** vs **outside** each window.
 // This is used for HUD/status bars, spotlight effects or transition wipes
 // The separate registers are WININ, WINOUT
-#define REG_WININ   (*(volatile u16*)0x04000048)
-#define REG_WINOUT  (*(volatile u16*)0x0400004A)
-#define REG_WIN0H   (*(volatile u16*)0x04000040)
-#define REG_WIN1H   (*(volatile u16*)0x04000042)
-#define REG_WIN0V   (*(volatile u16*)0x04000044)
-#define REG_WIN1V   (*(volatile u16*)0x04000046)
+// #define REG_WININ   (*(volatile u16*)0x04000048)
+// #define REG_WINOUT  (*(volatile u16*)0x0400004A)
+// #define REG_WIN0H   (*(volatile u16*)0x04000040)
+// #define REG_WIN1H   (*(volatile u16*)0x04000042)
+// #define REG_WIN0V   (*(volatile u16*)0x04000044)
+// #define REG_WIN1V   (*(volatile u16*)0x04000046)
 
 // Layers
 // GBA has 5 independent layers that can contain graphics: 
@@ -158,33 +158,33 @@
 #define GREEN_SWAP (*(volatile u16*)0x04000002) // <-- free chromatic abberration by setting this to 1 lol
 
 // backgrounds
-#define REG_BG0CNT  *((volatile u16*)(MEM_IO+0x0008))
-#define REG_BG1CNT  *((volatile u16*)(MEM_IO+0x000A))
-#define REG_BG2CNT  *((volatile u16*)(MEM_IO+0x000C))
-#define REG_BG3CNT  *((volatile u16*)(MEM_IO+0x000E))
+// #define REG_BG0CNT  *((volatile u16*)(MEM_IO+0x0008))
+// #define REG_BG1CNT  *((volatile u16*)(MEM_IO+0x000A))
+// #define REG_BG2CNT  *((volatile u16*)(MEM_IO+0x000C))
+// #define REG_BG3CNT  *((volatile u16*)(MEM_IO+0x000E))
 
 // background scroll
-#define REG_BG0HOFS *((volatile u16*)(MEM_IO+0x0010))
-#define REG_BG0VOFS *((volatile u16*)(MEM_IO+0x0012))
-#define REG_BG1HOFS *((volatile u16*)(MEM_IO+0x0014))
-#define REG_BG1VOFS *((volatile u16*)(MEM_IO+0x0016))
-#define REG_BG2HOFS *((volatile u16*)(MEM_IO+0x0018))
-#define REG_BG2VOFS *((volatile u16*)(MEM_IO+0x001A))
-#define REG_BG3HOFS *((volatile u16*)(MEM_IO+0x001C))
-#define REG_BG3VOFS *((volatile u16*)(MEM_IO+0x001E))
+// #define REG_BG0HOFS *((volatile u16*)(MEM_IO+0x0010))
+// #define REG_BG0VOFS *((volatile u16*)(MEM_IO+0x0012))
+// #define REG_BG1HOFS *((volatile u16*)(MEM_IO+0x0014))
+// #define REG_BG1VOFS *((volatile u16*)(MEM_IO+0x0016))
+// #define REG_BG2HOFS *((volatile u16*)(MEM_IO+0x0018))
+// #define REG_BG2VOFS *((volatile u16*)(MEM_IO+0x001A))
+// #define REG_BG3HOFS *((volatile u16*)(MEM_IO+0x001C))
+// #define REG_BG3VOFS *((volatile u16*)(MEM_IO+0x001E))
 
 // keypad input
-#define REG_KEYINPUT *((volatile u16*)(MEM_IO+0x0130))
+// #define REG_KEYINPUT *((volatile u16*)(MEM_IO+0x0130))
 
 // interrupts
-#define REG_IE      *((volatile u16*)(MEM_IO+0x0200))  // interrupt enable
-#define REG_IF      *((volatile u16*)(MEM_IO+0x0202))  // interrupt flags
-#define REG_IME     *((volatile u16*)(MEM_IO+0x0208))  // interrupt master enable
+// #define REG_IE      *((volatile u16*)(MEM_IO+0x0200))  // interrupt enable
+// #define REG_IF      *((volatile u16*)(MEM_IO+0x0202))  // interrupt flags
+// #define REG_IME     *((volatile u16*)(MEM_IO+0x0208))  // interrupt master enable
 
 // interrupt flags
-#define IRQ_VBLANK   (1<<0)
-#define IRQ_HBLANK   (1<<1)
-#define IRQ_VCOUNT   (1<<2)
+// #define IRQ_VBLANK   (1<<0)
+// #define IRQ_HBLANK   (1<<1)
+// #define IRQ_VCOUNT   (1<<2)
 
 // mode 3/4/5 framebuffer
 #define VRAM_FRONT  ((volatile u16*)MEM_VRAM)

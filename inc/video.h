@@ -32,3 +32,5 @@
 // Priorities  - OBJ/OBJ: 0-127, OBJ/BG: 0-3, BG/BG: 0-3
 // Effects     - Rotation/Scaling, alpha blending, fade-in/out, mosaic, window
 // Backlight   - GBA SP only (optionally by light on/off toggle button)
+
+void m3_plot(int x, int y, Color color);

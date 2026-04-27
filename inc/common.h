@@ -26,3 +26,4 @@ typedef u16      Color;
 #define CLR_CYAN    0x7FE0
 #define CLR_WHITE   0x7FFF
 
+#define RGB15(r, g, b) ((r) | (g)<<5 | (b)<<10)

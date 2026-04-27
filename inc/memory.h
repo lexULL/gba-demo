@@ -69,6 +69,8 @@
 #define MEM_VRAM 0x06000000 // 16-bit register
 #define MEM_OAM  0x07000000 // object attribute memory (sprites)
 
+#define vid_mem ((Color*)MEM_VRAM)
+
 // ################ I/O registers for graphical control ################
 //
 // display control register - primary control of the screen (General LCD Status - Read/Write)
@@ -95,8 +97,12 @@
 // display status register
 // #define REG_DISPSTAT *((volatile u16*)(MEM_IO+0x0004))
 // scanline counter register (Vertical Counter) (Read-Only)
+// Gives you information about the Draw/Blank status and is used to set display interrupts. 
+// HBlank interrupt is used in creating Mode 7 (ray-casted) graphics
+
 // Indicates the currently drawn scanline, values in range from 160..227 indicate "hidden" scanlines within the VBlank area.
 // #define REG_VCOUNT   *((volatile u16*)(MEM_IO+0x0006))
+// This counter goes into the VBlank as well, so it counts to 227 before starting at 0 again  
 // Bit  Expl.
 // 0-7  Current Scanline                                           (0..227) (Read-Only)
 // 8    Only used on the NDS for MSB of Current Scanline (LY.Bit8) (0..262) (Read-Only)
@@ -135,11 +141,14 @@
 #define DCNT_MODE3   0x0003
 #define DCNT_MODE4   0x0004
 #define DCNT_MODE5   0x0005
-#define DCNT_FB      (1<<4)   // frame select
-#define DCNT_OAM_HBL (1<<5)  // OAM access during H-Blank
-#define DCNT_OBJ_1D  (1<<6)  // 1D sprite mapping
-#define DCNT_BLANK   (1<<7)  // forced blank
-#define DCNT_BG0     (1<<8)
+#define DCNT_GB      (1<<3) // is set if cartridge is a gameboy color game, read-only
+#define DCNT_PAGE    (1<<4)   // page select, mode 4 and 5 uses page flipping
+#define DCNT_OAM_HBL (1<<5)  // OAM access during H-Blank. OAM is normally locked in VDraw, will reduce the amount of sprite pixels rendered per line.
+#define DCNT_OBJ_1D  (1<<6)  // Object mapping mode, tile memory is 32x32 matrix of tiles. When sprites are composed of multiple tiles high, 
+// this bit tells whether the next row of tiles lies beneath the previous, in correspondence with the matrix structure (2D mapping, OM = 0) or right next to it, 
+// so that memory is arranged as an array of sprites (1D mapping OM = 1).
+#define DCNT_BLANK   (1<<7)  // force a screen blank
+#define DCNT_BG0     (1<<8) // Enables rendering of corresponding background and sprites.
 #define DCNT_BG1     (1<<9)
 #define DCNT_BG2     (1<<10)
 #define DCNT_BG3     (1<<11)
@@ -182,10 +191,26 @@
 // #define REG_IME     *((volatile u16*)(MEM_IO+0x0208))  // interrupt master enable
 
 // interrupt flags
-// #define IRQ_VBLANK   (1<<0)
-// #define IRQ_HBLANK   (1<<1)
-// #define IRQ_VCOUNT   (1<<2)
+// #define IRQ_VBLANK   (1<<0) // VBlank interrupt request. If set, an interrupt will be fired at VBlank
+// #define IRQ_HBLANK   (1<<1) // HBlank interrupt request
+// #define IRQ_VCOUNT   (1<<2) // VCount interrupt request. Fires interrupt if current scanline matches trigger value.
 
 // mode 3/4/5 framebuffer
 #define VRAM_FRONT  ((volatile u16*)MEM_VRAM)
 #define VRAM_BACK   ((volatile u16*)(MEM_VRAM + 0xA000))  // mode 4/5 only
+
+// By default, arrays go into IWRAM (which is only 32K).
+// A mode 3 bitmap is 240x160x2 = 77K, which would not be good to put into IWRAM :))
+// To avoid this, put it in the read-only section (ROM) which is much larger, and all you have to do is declare your array as "const" (or `.rodata` in ARM assembly)
+// Note: for multi-boot programs, ROM actually means EWRAM which is only 256K long. This would fit three mode 3 bitmaps, more would again be bad unless you use compression
+//
+// The array comment from above is true for all arrays, not just data arrays.
+// If you want any kind of large array (like a backbuffer for mode 3), it would also default to and overfill IWRAM.
+// You can't make it "const" because then you'd not be able to write on it.
+// GCC has attributes that lets you choose where things are put, e.g. in IWRAM
+#define EWRAM_DATA __attribute__((section(".ewram")))
+#define IWRAM_DATA __attribute__((section(".iwram")))
+#define  EWRAM_BSS __attribute__((section(".sbss")))
+
+#define EWRAM_CODE __attribute__((section(".ewram"), long_call))
+#define IWRAM_CODE __attribute__((section(".iwram"), long_call))

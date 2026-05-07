@@ -9,7 +9,7 @@
 
 // Internal Memory Details
 //
-// BIOS ROM    - 16  KB
+// BIOS ROM    - 16  KB 
 // Work RAM    - 288 KB (Fast 32K on-chip, plus Slow 256K on-board)
 // VRAM        - 96  KB
 // OAM         - 1   KB (128 OBJs 3x16-bit, 32 OBJ-Rotation/Scalings 4x16-bit)

@@ -3,6 +3,7 @@
 #include <gba_systemcalls.h>
 #include <gba_input.h>
 #include "video.h"
+#include "input.h"
 
 u32 current_frame = 0u;
 
@@ -36,6 +37,9 @@ int main(void) {
 
     m3_fill(RGB15(12, 12, 14));
 
+    Color clr;
+    u32 btn;
+
     // Lines in top right frame
     for(ii=0; ii<=8; ii++)
     {
@@ -53,6 +57,16 @@ int main(void) {
 
     while( 1 ) {
         VBlankIntrWait(); // v-sync here
+
+        if((current_frame & 7) == 0u) {
+            key_poll();
+        }
+
+        for(ii=0; ii<KI_MAX; ++ii) {
+            clr = 0u;
+
+        }
+
         // what happens behind the scenes:
         // while(REG_VCOUNT >= 160); // wait till VDraw
         // while(REG_VCOUNT < 160); // wait till VBlank

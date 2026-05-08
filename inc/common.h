@@ -27,5 +27,6 @@ typedef u16      Color;
 #define CLR_WHITE   0x7FFF
 
 #define RGB15(r, g, b) ((r) | (g)<<5 | (b)<<10)
+#define CLR_UP RGB15(27,27,29)
 
 #define INLINE static inline

@@ -15,7 +15,7 @@ u32 current_frame = 0u;
 // To do this, you have to wait until the next VDraw
 void VBlank() {
     ++current_frame;
-    GREEN_SWAP = !GREEN_SWAP;
+    // GREEN_SWAP = !GREEN_SWAP;
 }
 
 void VCount() {
@@ -41,31 +41,38 @@ int main(void) {
     u32 btn;
 
     // Lines in top right frame
-    for(ii=0; ii<=8; ii++)
-    {
-        jj= 3*ii+7;
-        m3_line(132+11*ii, 9, 226, 12+7*ii, RGB15(jj, 0, jj));
-        m3_line(226-11*ii,70, 133, 69-7*ii, RGB15(jj, 0, jj));
-    }
+    // for(ii=0; ii<=8; ii++)
+    // {
+    //     jj= 3*ii+7;
+    //     m3_line(132+11*ii, 9, 226, 12+7*ii, RGB15(jj, 0, jj));
+    //     m3_line(226-11*ii,70, 133, 69-7*ii, RGB15(jj, 0, jj));
+    // }
 
-    // Lines in bottom left frame
-    for(ii=0; ii<=8; ii++)
-    {
-        jj= 3*ii+7;
-        m3_line(15+11*ii, 88, 104-11*ii, 150, RGB15(0, jj, jj));
-    }
+    // // Lines in bottom left frame
+    // for(ii=0; ii<=8; ii++)
+    // {
+    //     jj= 3*ii+7;
+    //     m3_line(15+11*ii, 88, 104-11*ii, 150, RGB15(0, jj, jj));
+    // }
 
     while( 1 ) {
         VBlankIntrWait(); // v-sync here
 
-        if((current_frame & 7) == 0u) {
-            key_poll();
-        }
+        // if((current_frame & 7) == 0u) // this makes the key polling happen every 8 frame so it looks slower (to fully demonstrate the input stuff)
+        key_poll();
 
         for(ii=0; ii<KI_MAX; ++ii) {
             clr = 0u;
-
+            btn = 1 << ii;
+            if(key_hit(btn)) clr = CLR_RED;
+            else if(key_released(btn)) clr = CLR_YELLOW;
+            else if(key_held(btn)) clr = CLR_LIME;
+            else clr = CLR_UP;
         }
+
+        // void m3_line(s32 x1, s32 y1, s32 x2, s32 y2, Color clr);
+        m3_line(0,0,100,100, clr);
+        m3_line(0,100,100,100, clr);
 
         // what happens behind the scenes:
         // while(REG_VCOUNT >= 160); // wait till VDraw

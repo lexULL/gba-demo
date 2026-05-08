@@ -123,3 +123,138 @@ static inline void m4_plot(s32 x, s32 y, u8 clr) {
 
 // 8bpp bresenham for line drawing, also uses u8 for color ofc
 void bmp8_line(s32 x1, s32 y1, s32 x2, s32 y2, u8 clr);
+
+// Sprite and background mapping overview
+//
+// Mapping concerns everything about which tiles to use and where they go. As said, the screen appearence of both sprites and backgrounds are constructed of tiles, laid out side by side.
+// You have to tell the GBA which tiles to blit to what position.
+// Backgrounds use a tile-map which works just like an ordinary paletted bitmap except that it's a matrix of screenblock entries (with tile indices) instead of pixels (containing color-indices)
+// Keep a clear distinction between the entries in the map (the screenblock entries, SE for short) and the image-data (the actual tiles).
+// The term "tile" is often used for both.
+// each SE has its own tile-index and it contains bits for horizontal and vertical flipping and if it's a 16-color background, an index for the palbank as well.
+//
+// For sprites, it's a bit different but the basic steps remain.
+// You give one tile-index for the whole sprite; the GBA then figures out the other tiles to use by looking at the shape and size of the sprite and the sprite-mapping mode
+// the mapping mode is either 1D or 2D, depending on REG_DISPCNT{6}.
+// 1D mapping states that the tiles that a sprite should use are consecutive.
+// Like backgrounds, there's additional flipping flags and palette-info for 16-color sprites.
+// Unlike backgrounds, these work on the whole sprite, not just on one tile.
+// Also, the component tiles of sprites are always adjoining, so you can see a sprite as a miniature tiled-background with some imagination.
+//
+// What belongs to the mapping step as well is the affine transformation matrix. With this 2x2 matrix you can rotate, scale or shear sprites or backgrounds.
+// There seems to be a lot of confusion about how this works so I've written a detailed, mathematical description on how this thing works.
+// Bottom line: the matrix maps from screen space to texture-space
+
+// Sprite and background image data
+//
+// Image data is what the GBA actually uses to produce an image. This means two things, tiles and palettes
+// -- Tiles --
+// Sprites and backgrounds are composed of a matrix of smaller bitmaps called tiles. Your baic tile is an 8x8 bitmap.
+// Tiles come in 4bpp (16 colors / 16 palettes) and 8bpp (256 colors / 1 palette) variants.
+// In analogy to floating point numbers, these can be referred to as s-tiles (single-size tile) and d-tiles (double-size tiles).
+// An s-tile is 32 (20h/0x20) bytes long, a d-tile 64 (40h/0x40) bytes.
+// The default type of tile is the 4bpp variant (the s-tile).
+//
+// There is sometimes a misunderstanding about what working in tiles really means. In tiled modes, VRAM is not a big bitmap out of which tiles are selected, but
+// a collection of 8x8 pixel bitmaps (i.e. the tiles). It is important that you understand the differences between these two methods.
+// Consider an 8x8 rectangle in a big bitmap, and an 8x8 tile. In the big bitmap, the data after the first 8 pixels contain the next 8 pixels of the same scanline.
+// The next line of the tile can be found further on. In tiled mods, the next scanline of the tile immediately follows the current line.
+//
+// Basically, VRAM works as an 8xN*8 bitmap in the tiled modes. Because such a small width is impractical to work with, they're usually presented as a wider bitmap anyway.
+// An example is the VBA tile viewer, which displays char blocks as a 256x256
+// You need a tool that can break up a bitmap into 8x8 chunks, or restructure it into a bitmap with a width of 8 pixels
+//
+// As with all bitmaps, it is the programmer's responsibility that the bit-depth of the tiles that sprites and backgrounds correspond to the bit-depth of the data in VRAM.
+// If this is out of sync, graphical errors will occur.
+
+// Tiled Graphics Considerations
+//
+// Remember and understand the following points:
+// 1. The data of each tile are stored sequentially, with the next row of 8 pixels immediately following the previous row. VRAM is basically a big bitmap 8 pixels wide.
+// Graphics converters should be able to convert bigger bitmaps into this format.
+// 2. As always, watch your bit-depth.
+
+// Tip for Graphics Converters
+//
+// If you want to make your own conversion tool,s here's a little tip that'll help you with tiles. Work in stages;
+// Do not go directly from a normal, linear bitmap to writing the data-file.
+// Create a tiling function that takes a bitmap and arranges the tiles into a bitmap 1 tile wide and H tiles high
+// This can then be exported normally.
+// If you allow for a variable tile-width (not hard-coding the 8-pixel width), you can use it for other purposes as well.
+// e.g. to create 16x16 sprites, first arrange with width=16, then width=8
+
+// -- Tile blocks (aka charblocks) --
+//
+// All the tiles are stored in charblocks. Tradition has it that tiles are characters (not to be confused with 8bit char) and so the critters are called charblock.
+// Each charblock is 16kb (4000h bytes) long, so there's room for 512 (4000h/20h) s-tiles or 256 (4000h/40h) d-tiles. You can also consider charblocks to be matrices of tiles
+// 32x16 for s-tiles, 16x16 (or 32x8) for d-tiles. The whole 96KB of VRAM can be seen as 6 charblocks.
+//
+// As said, there are 6 tile-blocks, that is 4 for backgrounds (0-3) and 2 for sprites (4-5).
+// For tiled backgrounds, tile-counting starts at a given character base block (block for character base, CBB for short), which are indicated by REG_BGxCNT {2-3}
+// Sprite tile-indexing always starts at the lower sprite block (block 4, starting at 0601:0000h)
+// It'd be nice if tile-indexing followed the same scheme for backgrounds and sprites, but it doesn't. For sprites, numbering always follows s-tiles (20h offsets) even for d-tiles,
+// but backgrounds stick to their indicated tile-size: 20h offsets in 4bpp mode, 40h offsets for 8bpp mode
+//
+// BG VS SPRITE TILE INDEXING
+// Sprites always have 32 bytes between tile indices, bg tile-indexing uses 32 or 64 byte offsets depending on their set bit-depth.
+
+// Now, both regular backgrounds and sprites have 10 bits for tile indices. That means 1024 allowed indices.
+// Since each charblock contains 512 s-tiles, you can access not noly the base block, but also the one after that.
+// And if your background is using d-tiles, you can actually access a total of four blocks!
+// Now, since tiled backgrounds can start counting at any of the four background charblocks, you might be tempted to try to use the sprite charblocks (blocks 4 and 5) as well.
+// On emulators it works but on the real GBA it doesn't, which is one of the reasons why you want to test on real hardware.
+
+// Another thing you need to know about available charblocks is that in one of the bitmap modes, the bitmaps extend into the lower sprite block.
+// For that reason, you can only use the higher sprite block (containing tiles 512 to 1023) in this case.
+
+// Thanks to typedefs, you can define types for tiles and charblocks so that you can quickly come up with the addresses of tiles by simple array-accesses.
+// An alternative to this is using macros or inline functions to calculate the right addresses. In the end it hardly matters which method you choose, though.
+// Of course, the typedef method allows the use of the sizeof operator, which can be quite handy when you need to copy a certain amonut of tiles.
+// Also struct-copies are faster than simple loops and require less C-code too!!
+
+// tile 8x8@4bpp: 32 bytes, 8 ints
+typedef struct { u32 data[8]; }TILE, TILE4;
+// d-tile: double-sized tile (8bpp)
+typedef struct { u32 data[16]; }TILE8;
+// tile block: 32x16 tiles, 16x16 d-tiles
+typedef TILE  CHARBLOCK[512];
+typedef TILE8 CHARBLOCK8[256];
+
+#define tile_mem  ( (CHARBLOCK*)0x06000000 )
+#define tile8_mem ((CHARBLOCK8*)0x06000000 )
+
+// Code example:
+// TILE *ptr = &tile_mem[4][12]; // block 4 (== lower object block), tile 12
+// Copy a tile from data to sprite-mem, tile 12
+// tile_mem[4][12] = *(TILE*)spriteData;
+
+// -- Palettes and tile colors --
+//
+// Sprite and backgrounds have separate palettes. The background palette goes first at 0500:0000h, immediately followed by the sprite palette (0500:0200h).
+// Both palettes contain 256 entries of 15-bit colors.
+// In 8-bit color mode, the pixel value in the tiles is palette-index for that pixel.
+// In 4-bit color mode, the pixel value contains the lower nibble of the palette index. The high nibble is the palbank index, which can be found in either the sprite's attributes
+// or the upper nibble of the tiles. If the pixel value is 0, then that pixel won't be rendered (i.e. will be transparent)
+
+// Because of 16-color mode and the transparency issue, it is essential that your bitmap editor leaves the palette intact.
+
+
+// Subject	Backgrounds	Sprites
+// Number	4 (2 affine)	128 (32 affine)
+// Max size	reg: 512x512
+// aff: 1024x1024	64x64
+// Control	REG_BGxCNT	OAM
+// Base tile block	0-3	4
+// Available tiles ids	reg: 0-1023
+// aff: 0-255	modes 0-2: 0-1023
+// modes 3-5: 512-1023
+// Tile memory offsets	Per tile size:
+// 4bpp: start= base + id*32
+// 8bpp: start= base + id*64	Always per 4bpp tile size:
+// start= base + id*32
+// Mapping	reg: the full map is divided into map-blocks of 32×32 tegels. (banked map)
+// aff: one matrix of tegels, just like a normal bitmap (flat map)	If a sprite is m × n tiles in size:
+// 1D mapping: the m*n successive tiles are used, starting at id
+// 2D mapping: tile-blocks are 32×32 matrices; the used tiles are the n columns of the m rows of the matrix, starting at id.
+// Flipping	Each tile can be flipped individually	Flips the whole sprite
+// Palette	0500:0000h	0500:0200h
